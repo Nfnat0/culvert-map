@@ -19,12 +19,12 @@ Open `http://127.0.0.1:4173/`.
 - `id`
 - `name`
 - `areaName`
-- `description`
-- `evidenceRank`
 - `sources`
 - `lastVerifiedAt`
 
-`evidenceRank` は `A`, `B`, `C` のいずれかです。`sources` は `title`, `url`, `publisher`, `licenseNote` を持つ配列です。
+`sources` は `title`, `url`, `publisher`, `licenseNote` を持つ配列で、最低1件必要です。
+
+任意プロパティ: `description`, `evidenceRank` (`A`/`B`/`C`), `riverName`, `tags`, `aliases`, `visibleTraces`, `riverReference`。`description` と `evidenceRank` は調査コストが高いため、最小要件には含めません。詳細記述があるFeatureだけ詳細パネルに表示されます。
 
 線形は次の優先順で更新します。
 

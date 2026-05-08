@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
 const playwrightImport = process.env.PLAYWRIGHT_IMPORT || "playwright";
@@ -5,6 +6,14 @@ const playwrightModule = await import(playwrightImport.startsWith("/") ? pathToF
 const { chromium } = playwrightModule;
 
 const url = process.argv[2] || "http://127.0.0.1:4173/";
+const dataFile = new URL("../data/culverts.geojson", import.meta.url);
+const data = JSON.parse(await readFile(dataFile, "utf8"));
+const culverts = data.features.filter((feature) => !feature.properties.riverReference);
+if (culverts.length < 2) throw new Error("Smoke test requires at least 2 culvert features.");
+const initialFeature = culverts[0];
+const secondFeature = culverts[1];
+const osmTraced = culverts.find((feature) => feature.properties.lineworkPrecision === "osm-traced" && feature.properties.id !== initialFeature.properties.id);
+
 const screenshots = {
   desktop: "/tmp/culvert-map-desktop.png",
   mobile: "/tmp/culvert-map-mobile.png",
@@ -52,22 +61,22 @@ async function runDesktopFlow() {
   });
 
   await page.goto(url, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "桃園川暗渠" }).waitFor({ timeout: 15000 });
+  await page.getByRole("heading", { name: initialFeature.properties.name }).waitFor({ timeout: 15000 });
   await expectText(page, "地図出典:");
   await expectText(page, "地理院タイル");
   await expectText(page, "OpenStreetMap contributors");
-  await expectText(page, "根拠 A");
 
-  await page.getByLabel("暗渠名・地域名で検索").fill("呑川本流");
-  await page.locator("#searchResults").getByRole("button", { name: /呑川本流暗渠/ }).click();
-  await page.getByRole("heading", { name: "呑川本流暗渠" }).waitFor({ timeout: 5000 });
-  await expectText(page, "線形出典");
-  await expectText(page, "OpenStreetMap linework");
+  await page.getByLabel("暗渠名・地域名で検索").fill(secondFeature.properties.name);
+  await page.locator("#searchResults").getByRole("button", { name: new RegExp(escapeRegex(secondFeature.properties.name)) }).first().click();
+  await page.getByRole("heading", { name: secondFeature.properties.name }).waitFor({ timeout: 5000 });
 
-  await page.getByLabel("暗渠名・地域名で検索").fill("逆川");
-  await page.locator("#searchResults").getByRole("button", { name: /旧逆川道路/ }).click();
-  await page.getByRole("heading", { name: "旧逆川道路" }).waitFor({ timeout: 5000 });
-  await expectText(page, "根拠 C");
+  if (osmTraced) {
+    await page.getByLabel("暗渠名・地域名で検索").fill(osmTraced.properties.name);
+    await page.locator("#searchResults").getByRole("button", { name: new RegExp(escapeRegex(osmTraced.properties.name)) }).first().click();
+    await page.getByRole("heading", { name: osmTraced.properties.name }).waitFor({ timeout: 5000 });
+    await expectText(page, "線形出典");
+    await expectText(page, "OpenStreetMap linework");
+  }
 
   await page.getByRole("button", { name: "レイヤーを切替" }).click();
   await page.getByLabel("淡色地図").check();
@@ -109,7 +118,7 @@ async function runMobileDeniedLocationFlow() {
   });
 
   await page.goto(url, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "桃園川暗渠" }).waitFor({ timeout: 15000 });
+  await page.getByRole("heading", { name: initialFeature.properties.name }).waitFor({ timeout: 15000 });
   await page.getByRole("button", { name: "現在地を表示" }).click();
   await expectText(page, "現在地を取得できませんでした。");
   await page.screenshot({ path: screenshots.mobile, fullPage: false });
@@ -129,4 +138,8 @@ function isIgnoredConsoleIssue(text) {
     text.includes("GL Driver Message") ||
     text.includes("GPU stall due to ReadPixels")
   );
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

@@ -1,8 +1,8 @@
 const DATA_URL = "./data/culverts.geojson";
 const JAPAN_CENTER = [139.7671, 35.6812];
 const DEFAULT_ZOOM = 12.2;
-const ACTIVE_COLOR = "#0797a6";
-const MUTED_COLOR = "#6d7478";
+const ACTIVE_COLOR = "#1a3548";
+const CULVERT_COLOR = "#3b5a72";
 
 const els = {
   map: document.querySelector("#map"),
@@ -220,7 +220,7 @@ function addDataLayers() {
         "case",
         ["==", ["get", "id"], state.selectedId],
         ACTIVE_COLOR,
-        "#08a6b3",
+        CULVERT_COLOR,
       ],
       "line-width": [
         "case",
@@ -331,13 +331,13 @@ function renderSearchResults() {
   els.searchResults.innerHTML = matches.length
     ? matches.map((feature) => {
         const props = feature.properties;
+        const sub = props.riverName ? `${escapeHtml(props.areaName)} / ${escapeHtml(props.riverName)}` : escapeHtml(props.areaName);
         return `
           <button class="search-result" type="button" data-id="${escapeHtml(props.id)}">
             <span>
               <strong>${escapeHtml(props.name)}</strong>
-              <span>${escapeHtml(props.areaName)} / ${escapeHtml(props.riverName || "河川名なし")}</span>
+              <span>${sub}</span>
             </span>
-            <span class="rank-chip">根拠 ${escapeHtml(props.evidenceRank)}</span>
           </button>
         `;
       }).join("")
@@ -376,7 +376,7 @@ function selectFeature(id, options = {}) {
       "case",
       ["==", ["get", "id"], state.selectedId],
       ACTIVE_COLOR,
-      "#08a6b3",
+      CULVERT_COLOR,
     ]);
     state.map.setPaintProperty("culverts-line", "line-width", [
       "case",
@@ -402,8 +402,6 @@ function selectFeature(id, options = {}) {
 function renderDetails() {
   const feature = getSelectedFeature();
   const props = feature.properties;
-  const traces = props.visibleTraces?.length ? props.visibleTraces.join(" / ") : "現地痕跡なし";
-  const tags = (props.tags || []).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
   const sourceItems = (props.sources || []).map((source) => `
     <li>
       <a href="${escapeAttr(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.title)}</a>
@@ -423,6 +421,10 @@ function renderDetails() {
       <ul class="source-list">${lineworkSourceItems}</ul>
     </section>
   ` : "";
+  const descriptionBlock = props.description ? `<p class="description">${escapeHtml(props.description)}</p>` : "";
+  const verifiedBlock = props.lastVerifiedAt
+    ? `<span class="meta-separator" aria-hidden="true"></span><span>最終確認 ${escapeHtml(props.lastVerifiedAt)}</span>`
+    : "";
 
   els.detail.innerHTML = `
     <h1>${escapeHtml(props.name)}</h1>
@@ -431,13 +433,10 @@ function renderDetails() {
       <span>${escapeHtml(props.areaName)}</span>
     </div>
     <div class="meta-row">
-      <span>根拠ランク</span>
-      <span class="rank-chip">根拠 ${escapeHtml(props.evidenceRank)}</span>
-      <span class="meta-separator" aria-hidden="true"></span>
       <span>情報源数 <b>${props.sources?.length || 0}</b> 件</span>
+      ${verifiedBlock}
     </div>
-    <p class="description">${escapeHtml(props.description)}</p>
-    <div class="tags">${tags}<span class="tag">${escapeHtml(traces)}</span></div>
+    ${descriptionBlock}
     <ul class="source-list">${sourceItems}</ul>
     ${lineworkBlock}
   `;
@@ -544,7 +543,7 @@ async function shareSelected() {
   url.searchParams.set("id", feature.properties.id);
   const shareData = {
     title: `${feature.properties.name} - 暗渠マップ`,
-    text: `${feature.properties.areaName} / 根拠 ${feature.properties.evidenceRank}`,
+    text: feature.properties.areaName,
     url: url.toString(),
   };
 
@@ -636,8 +635,6 @@ function buildSearchText(feature) {
     props.name,
     props.areaName,
     props.riverName,
-    ...(props.aliases || []),
-    ...(props.tags || []),
   ].filter(Boolean).join(" "));
 }
 
