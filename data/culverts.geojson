@@ -6538,7 +6538,7 @@
         "id": "minamimaebori-ryokuchi",
         "name": "南前堀緑地",
         "areaName": "東京都大田区",
-        "description": "南前堀を埋め立てた廃河川敷に設置された公園。大田区の公園案内は南前堀排水場跡が残ることも示しており、東京都資料では北前堀・六間堀などとともに法定河川廃止後の緑道・公園化の対象として整理されている。",
+        "description": "南前堀を埋め立てた廃河川敷に設置された緑地公園。東糀谷三丁目付近にあり、遊具や広場のほか、西端部には赤レンガ造りの南前堀排水場跡が残る。羽田・糀谷方面に残る堀割由来の公園として、旧水路景観を読み取りやすい。",
         "evidenceRank": "A",
         "sources": [
           {
@@ -6599,7 +6599,7 @@
         "id": "rokkenbori-ryokuchi",
         "name": "六間堀緑地",
         "areaName": "東京都大田区",
-        "description": "六間堀は南前堀の枝堀で、幅六間ほどあったことが名前の由来。大田区はこれを埋め立てて公園として整備し、昭和56年に六間堀緑地として開設したと説明している。",
+        "description": "南前堀の枝堀だった六間堀を埋め立てて整備した緑地。名称は幅六間、約10.8mの堀であったことに由来し、長さは南北約600mとされる。環状八号線を挟んで北側・南側に分かれ、首都高速高架下の線形が旧堀割の痕跡を伝える。",
         "evidenceRank": "B",
         "sources": [
           {
@@ -7050,6 +7050,44 @@
         "osmElementIds": [
           "way/232491877"
         ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [139.6991, 35.5718],
+          [139.7041, 35.573],
+          [139.7097, 35.5742],
+          [139.7144, 35.575],
+          [139.7192, 35.5759],
+          [139.7241, 35.5772]
+        ]
+      },
+      "properties": {
+        "id": "rokugo-yosui-kitabori-ikegami",
+        "name": "旧六郷用水北堀（池上緑道区間）",
+        "areaName": "東京都大田区",
+        "sources": [
+          {
+            "title": "05：池上",
+            "url": "https://www.city.ota.tokyo.jp/seikatsu/sumaimachinami/machizukuri/keikan/forkumin/18syoku/05_ikegami.html",
+            "publisher": "大田区",
+            "licenseNote": "出典表示のうえ参照"
+          },
+          {
+            "title": "新大田区百景　「六郷用水」",
+            "url": "https://www.city.ota.tokyo.jp/seikatsu/manabu/gallary/choufu/yousui.html",
+            "publisher": "大田区",
+            "licenseNote": "出典表示のうえ参照"
+          }
+        ],
+        "lastVerifiedAt": "2026-05-08",
+        "description": "六郷用水が鵜の木方面から六郷羽田方面と池上・入新井方面へ分かれたうち、池上を通る北堀の跡。大田区の景観資料では池上地区に旧六郷用水の北堀が通り、現在は緑道として整備されていると説明される。鵜の木方面の散策路本線とは別線で、池上方面に向かう分流の線形を示す。",
+        "riverName": "六郷用水北堀",
+        "lineworkPrecision": "manual",
+        "lineworkNote": "大田区公式の池上景観資料に基づき、池上周辺の旧六郷用水北堀緑道を代表点列で暫定トレース。OSM IDは未確認。"
       }
     }
   ]
