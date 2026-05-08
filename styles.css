@@ -384,6 +384,11 @@ a {
     grid-template-columns: 420px 56px 56px;
   }
 
+  .layers-panel {
+    left: 24px;
+    right: auto;
+  }
+
   .detail-sheet {
     top: 112px;
     right: 24px;
