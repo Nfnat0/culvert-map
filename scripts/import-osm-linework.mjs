@@ -67,6 +67,24 @@ const mappings = [
     note: "洗足流れの暗渠区間 (waterway=drain, tunnel=yes) のOSM wayを線形に使用。上流の開渠区間は今後拡張予定。",
   },
   {
+    featureId: "kuhonbutsu-gawa",
+    kind: "ways",
+    osmWayIds: [502464462],
+    note: "OSM上で description=九品仏川暗渠、waterway=ditch、tunnel=culvert として登録された暗渠wayを線形に使用。",
+  },
+  {
+    featureId: "yabata-gawa-south",
+    kind: "ways",
+    osmWayIds: [260066678],
+    note: "OSM上で name=谷端川緑道 として登録された footway を線形に使用。豊島区資料の全長約1.7kmに対し、OSMで確認できる南側区間のみを反映。",
+  },
+  {
+    featureId: "yatomaegawa-ryokudo",
+    kind: "ways",
+    osmWayIds: [299222766],
+    note: "OSM上で name=谷戸前川緑道 として登録された footway を線形に使用。",
+  },
+  {
     featureId: "rokugo-yosui-kitabori-ikegami",
     kind: "ways",
     osmWayIds: [638128169, 638130172],
