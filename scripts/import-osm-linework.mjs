@@ -60,6 +60,12 @@ const mappings = [
     osmWayIds: [636915549],
     note: "逆川のculvert/drain wayを使用。",
   },
+  {
+    featureId: "senzoku-nagare",
+    kind: "ways",
+    osmWayIds: [232491877],
+    note: "洗足流れの暗渠区間 (waterway=drain, tunnel=yes) のOSM wayを線形に使用。上流の開渠区間は今後拡張予定。",
+  },
 ];
 
 const osmLineworkSource = {
