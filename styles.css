@@ -246,6 +246,12 @@ a {
   gap: 10px;
 }
 
+.detail-close-button {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+}
+
 .square-button {
   width: 46px;
   height: 46px;
@@ -370,6 +376,10 @@ a {
   box-shadow: var(--shadow);
   font-size: 14px;
   text-align: center;
+}
+
+.detail-sheet[hidden] ~ .toast {
+  bottom: max(16px, env(safe-area-inset-bottom));
 }
 
 .maplibregl-ctrl-bottom-left,

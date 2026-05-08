@@ -87,7 +87,20 @@ async function runDesktopFlow() {
   await page.locator("#terrainToggle").check();
   await page.locator("#culvertToggle").uncheck();
   await page.locator("#culvertToggle").check();
-  await page.getByRole("button", { name: "閉じる" }).click();
+  await page.getByRole("button", { name: "閉じる", exact: true }).click();
+  await page.getByRole("button", { name: "詳細を閉じる" }).click();
+  await page.locator("#detailSheet").waitFor({ state: "hidden", timeout: 5000 });
+  const reopenWard = await page.locator("#wardSelect").evaluate((select) => {
+    const next = [...select.options].map((option) => option.value).find((value) => value && value !== select.value);
+    select.value = next;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    return next;
+  });
+  await page.locator("#detailSheet").waitFor({ state: "visible", timeout: 5000 });
+  await page.waitForFunction((expected) => {
+    const text = document.querySelector(".area-line span")?.textContent || "";
+    return text.includes(expected);
+  }, reopenWard, { timeout: 5000 });
 
   await page.screenshot({ path: screenshots.desktop, fullPage: false });
   if (consoleIssues.length) failures.push(`Desktop console issues: ${consoleIssues.join(" | ")}`);

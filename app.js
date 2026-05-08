@@ -12,6 +12,7 @@ const INITIAL_COLOR_MODE = COLOR_MODES[STORED_COLOR_MODE] ? STORED_COLOR_MODE : 
 const els = {
   map: document.querySelector("#map"),
   mapFallback: document.querySelector("#mapFallback"),
+  detailSheet: document.querySelector("#detailSheet"),
   detail: document.querySelector("#detailContent"),
   wardSelect: document.querySelector("#wardSelect"),
   locateButton: document.querySelector("#locateButton"),
@@ -21,6 +22,7 @@ const els = {
   terrainToggle: document.querySelector("#terrainToggle"),
   riverToggle: document.querySelector("#riverToggle"),
   culvertToggle: document.querySelector("#culvertToggle"),
+  closeDetailButton: document.querySelector("#closeDetailButton"),
   favoriteButton: document.querySelector("#favoriteButton"),
   shareButton: document.querySelector("#shareButton"),
   toast: document.querySelector("#toast"),
@@ -317,6 +319,7 @@ function bindUi() {
     input.checked = input.value === state.colorMode;
     input.addEventListener("change", () => setCulvertColorMode(input.value));
   });
+  els.closeDetailButton.addEventListener("click", closeDetails);
   els.favoriteButton.addEventListener("click", toggleFavorite);
   els.shareButton.addEventListener("click", shareSelected);
 }
@@ -384,6 +387,7 @@ function selectFeature(id, options = {}) {
   }
 
   renderDetails();
+  openDetails();
   updateFavoriteButton();
   syncWardSelect();
 
@@ -432,6 +436,14 @@ function renderDetails() {
     <ul class="source-list">${sourceItems}</ul>
     ${lineworkBlock}
   `;
+}
+
+function openDetails() {
+  els.detailSheet.hidden = false;
+}
+
+function closeDetails() {
+  els.detailSheet.hidden = true;
 }
 
 function locateUser() {
