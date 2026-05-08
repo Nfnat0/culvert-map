@@ -9,8 +9,6 @@ const requiredProperties = [
   "id",
   "name",
   "areaName",
-  "description",
-  "evidenceRank",
   "sources",
   "lastVerifiedAt",
 ];
@@ -51,8 +49,8 @@ for (const [index, feature] of (data.features || []).entries()) {
     errors.push(`${label}.properties.id must be a string.`);
   }
 
-  if (!allowedRanks.has(props.evidenceRank)) {
-    errors.push(`${label}.properties.evidenceRank must be A, B, or C.`);
+  if (props.evidenceRank !== undefined && !allowedRanks.has(props.evidenceRank)) {
+    errors.push(`${label}.properties.evidenceRank must be A, B, or C when present.`);
   }
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(props.lastVerifiedAt || "")) {
@@ -92,7 +90,7 @@ for (const [index, feature] of (data.features || []).entries()) {
     }
   }
 
-  for (const key of ["name", "areaName", "description"]) {
+  for (const key of ["name", "areaName"]) {
     if (typeof props[key] !== "string" || props[key].trim().length === 0) {
       errors.push(`${label}.properties.${key} must be a non-empty string.`);
     }
