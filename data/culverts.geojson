@@ -3663,7 +3663,7 @@
         "id": "kyu-nomikawa-ryokuchi",
         "name": "旧呑川緑地",
         "areaName": "東京都大田区",
-        "description": "昭和35年頃に閉塞埋立した旧呑川の廃川敷を利用して開設された細長い緑道型の公園。大田区の旧呑川沿いに暗渠・廃川敷の痕跡をたどれる。",
+        "description": "蒲田駅東口の夫婦橋下流から東蒲田・北蒲田・西蒲田を北東に蛇行していた旧呑川の埋立て跡を整備した、全長約1.8kmの細長い緑道公園。昭和10年に新呑川（現本流）の水路が完成して以降、旧河道は昭和30〜50年代に順次埋立てられ緑地化。桜・柳・ポプラなどの並木と案内サインで往時の流路をたどれる。",
         "evidenceRank": "A",
         "sources": [
           {
@@ -6935,6 +6935,120 @@
         "lineworkNote": "逆川のculvert/drain wayを使用。",
         "osmElementIds": [
           "way/636915549"
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            139.6966586,
+            35.5909545
+          ],
+          [
+            139.6966498,
+            35.5908882
+          ],
+          [
+            139.6964438,
+            35.5903037
+          ],
+          [
+            139.6963388,
+            35.5899896
+          ],
+          [
+            139.6962636,
+            35.5898149
+          ],
+          [
+            139.6961536,
+            35.5895766
+          ],
+          [
+            139.6958546,
+            35.5894146
+          ],
+          [
+            139.6956709,
+            35.589274
+          ],
+          [
+            139.695518,
+            35.589154
+          ],
+          [
+            139.6954238,
+            35.5890994
+          ],
+          [
+            139.6954317,
+            35.588908
+          ],
+          [
+            139.6955251,
+            35.5885419
+          ],
+          [
+            139.6955091,
+            35.588427
+          ],
+          [
+            139.6952333,
+            35.5880528
+          ],
+          [
+            139.695174,
+            35.5879848
+          ],
+          [
+            139.6948857,
+            35.5871639
+          ],
+          [
+            139.6948545,
+            35.587099
+          ],
+          [
+            139.6945246,
+            35.5868326
+          ]
+        ]
+      },
+      "properties": {
+        "id": "senzoku-nagare",
+        "name": "洗足流れ",
+        "areaName": "東京都大田区",
+        "description": "洗足池を水源とし、東雪谷一丁目を経由して中池上で呑川に合流する全長約1.5kmの旧用水路（別名: 池上用水）。中原街道や東急池上線下を抜ける暗渠区間と、東雪谷5丁目付近で再び現れる開渠区間が混在し、水路上の散策路は大田区の桜のプロムナードに位置付けられている。",
+        "sources": [
+          {
+            "title": "桜のプロムナード",
+            "url": "https://www.city.ota.tokyo.jp/seikatsu/sumaimachinami/douro_kouen_kasen/sansakuro/sakurapromenade.html",
+            "publisher": "大田区",
+            "licenseNote": "出典表示のうえ参照"
+          },
+          {
+            "title": "洗足流れ",
+            "url": "https://ja.wikipedia.org/wiki/%E6%B4%97%E8%B6%B3%E6%B5%81%E3%82%8C",
+            "publisher": "Wikipedia",
+            "licenseNote": "CC BY-SA 4.0。経路概要の参照"
+          }
+        ],
+        "lastVerifiedAt": "2026-05-08",
+        "lineworkPrecision": "osm-traced",
+        "lineworkSources": [
+          {
+            "title": "OpenStreetMap linework",
+            "url": "https://www.openstreetmap.org/copyright",
+            "publisher": "OpenStreetMap contributors",
+            "licenseNote": "ODbL 1.0。線形補正に使用"
+          }
+        ],
+        "lineworkNote": "洗足流れの暗渠区間 (waterway=drain, tunnel=yes) のOSM wayを線形に使用。上流の開渠区間は今後拡張予定。",
+        "osmElementIds": [
+          "way/232491877"
         ]
       }
     }
