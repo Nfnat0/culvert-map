@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
 const dataFile = new URL("../data/culverts.geojson", import.meta.url);
-const overpassUrl = "https://overpass-api.de/api/interpreter";
+const overpassUrl = process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter";
 const joinToleranceMeters = 80;
 
 const mappings = [
@@ -66,6 +66,12 @@ const mappings = [
     osmWayIds: [232491877],
     note: "洗足流れの暗渠区間 (waterway=drain, tunnel=yes) のOSM wayを線形に使用。上流の開渠区間は今後拡張予定。",
   },
+  {
+    featureId: "rokugo-yosui-kitabori-ikegami",
+    kind: "ways",
+    osmWayIds: [638128169, 638130172],
+    note: "OSM上で name=六郷用水（北堀）かつ waterway=drain・tunnel=culvert タグの 2 way を西→東で接続。住宅街を直線横断していた暫定線を実水路位置に置換。",
+  },
 ];
 
 const osmLineworkSource = {
@@ -128,6 +134,11 @@ async function fetchOsmData(items) {
   if (relationIds.size) statements.push(`relation(id:${[...relationIds].join(",")});`);
 
   const query = `[out:json][timeout:30];(${statements.join("")});out body;>;out skel qt;`;
+
+  if (process.env.OVERPASS_FIXTURE) {
+    return JSON.parse(await readFile(process.env.OVERPASS_FIXTURE, "utf8"));
+  }
+
   const response = await fetch(`${overpassUrl}?${new URLSearchParams({ data: query })}`, {
     headers: {
       "user-agent": "culvert-map-mvp/1.0 (local development)",
