@@ -11,7 +11,7 @@ const data = JSON.parse(await readFile(dataFile, "utf8"));
 const culverts = data.features.filter((feature) => !feature.properties.riverReference);
 if (culverts.length < 2) throw new Error("Smoke test requires at least 2 culvert features.");
 const initialFeature = culverts[0];
-const secondFeature = culverts[1];
+const secondFeature = culverts.find((feature) => extractWards(feature.properties.areaName)[0] !== extractWards(initialFeature.properties.areaName)[0]) || culverts[1];
 const osmTraced = culverts.find((feature) => feature.properties.lineworkPrecision === "osm-traced" && feature.properties.id !== initialFeature.properties.id);
 
 const screenshots = {
@@ -66,14 +66,18 @@ async function runDesktopFlow() {
   await expectText(page, "地理院タイル");
   await expectText(page, "OpenStreetMap contributors");
 
-  await page.getByLabel("暗渠名・地域名で検索").fill(secondFeature.properties.name);
-  await page.locator("#searchResults").getByRole("button", { name: new RegExp(escapeRegex(secondFeature.properties.name)) }).first().click();
-  await page.getByRole("heading", { name: secondFeature.properties.name }).waitFor({ timeout: 5000 });
+  const targetWard = extractWards(secondFeature.properties.areaName)[0];
+  if (targetWard) {
+    await page.locator("#wardSelect").selectOption(targetWard);
+    await page.waitForFunction((expected) => {
+      const text = document.querySelector(".area-line span")?.textContent || "";
+      return text.includes(expected);
+    }, targetWard, { timeout: 5000 });
+  }
 
   if (osmTraced) {
-    await page.getByLabel("暗渠名・地域名で検索").fill(osmTraced.properties.name);
-    await page.locator("#searchResults").getByRole("button", { name: new RegExp(escapeRegex(osmTraced.properties.name)) }).first().click();
-    await page.getByRole("heading", { name: osmTraced.properties.name }).waitFor({ timeout: 5000 });
+    await page.goto(`${url}?id=${encodeURIComponent(osmTraced.properties.id)}`, { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading", { name: osmTraced.properties.name }).waitFor({ timeout: 15000 });
     await expectText(page, "線形出典");
     await expectText(page, "OpenStreetMap linework");
   }
@@ -140,6 +144,10 @@ function isIgnoredConsoleIssue(text) {
   );
 }
 
-function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function extractWards(areaName) {
+  return String(areaName || "")
+    .replace(/^東京都/, "")
+    .split(/[・、,/]/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
 }

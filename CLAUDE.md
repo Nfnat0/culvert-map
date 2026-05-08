@@ -41,15 +41,15 @@ Smoke test writes screenshots to `/tmp/culvert-map-{desktop,mobile}.png`.
 
 Three-file frontend, no bundler, no framework:
 
-- `index.html` — app shell. Loads MapLibre 5.23.0 + `app.js` with `defer`. Static structural elements: `#map`, `#searchForm`, `#layersPanel`, `#detailSheet` (bottom sheet on mobile, side panel on desktop via CSS media query at 760px).
+- `index.html` — app shell. Loads MapLibre 5.23.0 + `app.js` with `defer`. Static structural elements: `#map`, `#wardSelect`, `#layersPanel`, `#detailSheet` (bottom sheet on mobile, side panel on desktop via CSS media query at 760px).
 - `styles.css` — all visual styling. Mobile-first; desktop layout switches at `(min-width: 760px)`.
 - `app.js` — single module, plain script (not ESM). Top-level `init()` fetches GeoJSON + waits for MapLibre, then mounts the map and wires UI. State lives in one module-scoped `state` object; `els` caches DOM nodes. Persistence via `localStorage` keys `culvert.favorites` and `culvert.lastView`.
 
 Map style is constructed inline in `app.js` (`mapStyle` object) — four GSI raster sources (std/pale/photo/hillshade) with layer visibility toggled by the layers panel. Culvert features are rendered as four stacked layers from the same `culverts` source: `river-reference` (filtered to `riverReference == true`), `culverts-shadow` (white halo), `culverts-line` (colored line, recolored on selection via `setPaintProperty`), `culverts-hit` (invisible wide click target). Selected feature also gets a circle pair (`selected-point-halo` + `selected-point`).
 
-Selection flow: `selectFeature(id, {fit, pushUrl})` is the single entry point — updates `state.selectedId`, recolors the line layer, repositions the selected-point source, re-renders detail + nearby panels, and optionally `history.replaceState`s `?id=…`. Initial selection comes from `?id=` URL param or first feature.
+Selection flow: `selectFeature(id, {fit, pushUrl})` is the single entry point — updates `state.selectedId`, recolors the line layer, repositions the selected-point source, re-renders the detail panel, syncs the ward selector, and optionally `history.replaceState`s `?id=…`. Initial selection comes from `?id=` URL param or first feature.
 
-Search uses a normalized `searchText` field (NFKC + lowercase + whitespace-stripped) precomputed in `normalizeData()` over `name`, `areaName`, `riverName`, `aliases`, `tags`. River-reference features are excluded from search and detail.
+Region picker (`#wardSelect`) replaces free-text search. Options are derived at runtime by `populateWardSelector()` → `extractWards(areaName)` which strips a leading `東京都` prefix and splits on `・、,/`. Selecting a ward calls `selectWard(ward)` to fit-bounds across all matching features and select the first as the active feature. River-reference features are excluded from the picker, the detail panel, and selection.
 
 ## Data model
 
@@ -63,10 +63,9 @@ Optional props (rendered when present, but not required — keeps research cost 
 
 - `description` — free prose, shown in detail panel only when set
 - `evidenceRank: "A" | "B" | "C"` — curation confidence; format-validated when present
-- `riverReference: true` — render as muted river-reference line, exclude from search / detail / nearby
+- `riverReference: true` — render as muted river-reference line, exclude from picker / detail / selection
 - `lineworkPrecision: "manual" | "osm-traced"`, `lineworkSources[]`, `lineworkNote`, `osmElementIds[]` (`way/123` or `relation/123`) — set by `import-osm-linework.mjs`; surfaced in detail panel as the 線形出典 section
-- `riverName` — included in search index and search-result subtitle
-- `aliases[]`, `tags[]`, `visibleTraces[]` — accepted by validator for backward compat but no longer indexed or rendered
+- `riverName`, `aliases[]`, `tags[]`, `visibleTraces[]` — accepted by validator for backward compat but no longer indexed or rendered
 
 OSM is treated as linework assistance only — never as evidence. `sources[]` carries the public/administrative attribution that justifies inclusion.
 

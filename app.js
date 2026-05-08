@@ -1,17 +1,19 @@
 const DATA_URL = "./data/culverts.geojson";
 const JAPAN_CENTER = [139.7671, 35.6812];
 const DEFAULT_ZOOM = 12.2;
-const ACTIVE_COLOR = "#1a3548";
-const CULVERT_COLOR = "#3b5a72";
+const ACCENT_COLOR = "#ff8a00";
+const COLOR_MODES = {
+  dark: { line: "#243648", shadow: "#ffffff" },
+  light: { line: "#ffffff", shadow: "#0b1a26" },
+};
+const STORED_COLOR_MODE = localStorage.getItem("culvert.colorMode");
+const INITIAL_COLOR_MODE = COLOR_MODES[STORED_COLOR_MODE] ? STORED_COLOR_MODE : "dark";
 
 const els = {
   map: document.querySelector("#map"),
   mapFallback: document.querySelector("#mapFallback"),
   detail: document.querySelector("#detailContent"),
-  nearby: document.querySelector("#nearbyList"),
-  searchForm: document.querySelector("#searchForm"),
-  searchInput: document.querySelector("#searchInput"),
-  searchResults: document.querySelector("#searchResults"),
+  wardSelect: document.querySelector("#wardSelect"),
   locateButton: document.querySelector("#locateButton"),
   layersButton: document.querySelector("#layersButton"),
   layersPanel: document.querySelector("#layersPanel"),
@@ -19,7 +21,6 @@ const els = {
   terrainToggle: document.querySelector("#terrainToggle"),
   riverToggle: document.querySelector("#riverToggle"),
   culvertToggle: document.querySelector("#culvertToggle"),
-  fitAllButton: document.querySelector("#fitAllButton"),
   favoriteButton: document.querySelector("#favoriteButton"),
   shareButton: document.querySelector("#shareButton"),
   toast: document.querySelector("#toast"),
@@ -32,6 +33,7 @@ const state = {
   userLocation: null,
   favorites: new Set(JSON.parse(localStorage.getItem("culvert.favorites") || "[]")),
   mapLoaded: false,
+  colorMode: INITIAL_COLOR_MODE,
 };
 
 const mapStyle = {
@@ -87,10 +89,11 @@ async function init() {
   const [data] = await Promise.all([fetchGeoJson(), waitForMapLibre()]);
   state.data = normalizeData(data);
   state.selectedId = getInitialFeature().properties.id;
+  populateWardSelector();
+  syncWardSelect();
   initMap();
   bindUi();
   renderDetails();
-  renderNearby();
 }
 
 async function waitForMapLibre() {
@@ -117,7 +120,6 @@ function normalizeData(data) {
       properties: {
         ...feature.properties,
         center: getFeatureCenter(feature),
-        searchText: buildSearchText(feature),
       },
     })),
   };
@@ -197,15 +199,16 @@ function addDataLayers() {
     },
   });
 
+  const colors = COLOR_MODES[state.colorMode];
   state.map.addLayer({
     id: "culverts-shadow",
     type: "line",
     source: "culverts",
     filter: ["!=", ["get", "riverReference"], true],
     paint: {
-      "line-color": "#ffffff",
+      "line-color": colors.shadow,
       "line-width": ["interpolate", ["linear"], ["zoom"], 8, 4, 15, 10],
-      "line-opacity": 0.84,
+      "line-opacity": 0.78,
       "line-blur": 1.2,
     },
   });
@@ -216,24 +219,34 @@ function addDataLayers() {
     source: "culverts",
     filter: ["!=", ["get", "riverReference"], true],
     paint: {
-      "line-color": [
-        "case",
-        ["==", ["get", "id"], state.selectedId],
-        ACTIVE_COLOR,
-        CULVERT_COLOR,
-      ],
-      "line-width": [
-        "case",
-        ["==", ["get", "id"], state.selectedId],
-        ["interpolate", ["linear"], ["zoom"], 8, 3.5, 15, 7.5],
-        ["interpolate", ["linear"], ["zoom"], 8, 2.2, 15, 5],
-      ],
-      "line-opacity": [
-        "case",
-        ["==", ["get", "id"], state.selectedId],
-        1,
-        0.82,
-      ],
+      "line-color": colors.line,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 8, 2.2, 15, 5],
+      "line-opacity": 0.7,
+    },
+  });
+
+  state.map.addLayer({
+    id: "culverts-active-glow",
+    type: "line",
+    source: "culverts",
+    filter: getActiveFilter(),
+    paint: {
+      "line-color": ACCENT_COLOR,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 8, 9, 15, 18],
+      "line-opacity": 0.32,
+      "line-blur": 3,
+    },
+  });
+
+  state.map.addLayer({
+    id: "culverts-active",
+    type: "line",
+    source: "culverts",
+    filter: getActiveFilter(),
+    paint: {
+      "line-color": ACCENT_COLOR,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 8, 3.8, 15, 8],
+      "line-opacity": 1,
     },
   });
 
@@ -266,7 +279,7 @@ function addDataLayers() {
     source: "selected-point",
     paint: {
       "circle-radius": 9,
-      "circle-color": ACTIVE_COLOR,
+      "circle-color": ACCENT_COLOR,
       "circle-stroke-color": "#ffffff",
       "circle-stroke-width": 2,
     },
@@ -286,23 +299,7 @@ function addDataLayers() {
 }
 
 function bindUi() {
-  els.searchForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const matches = getSearchMatches();
-    if (matches.length > 0) {
-      selectFeature(matches[0].properties.id, { fit: true, pushUrl: true });
-      hideSearchResults();
-    }
-  });
-
-  els.searchInput.addEventListener("input", renderSearchResults);
-  els.searchInput.addEventListener("focus", renderSearchResults);
-  document.addEventListener("click", (event) => {
-    if (!event.target.closest(".search-box") && !event.target.closest("#searchResults")) {
-      hideSearchResults();
-    }
-  });
-
+  els.wardSelect.addEventListener("change", () => selectWard(els.wardSelect.value));
   els.locateButton.addEventListener("click", locateUser);
   els.layersButton.addEventListener("click", toggleLayersPanel);
   els.closeLayersButton.addEventListener("click", () => setLayersPanel(false));
@@ -312,58 +309,65 @@ function bindUi() {
   els.terrainToggle.addEventListener("change", () => setLayerVisibility("terrain-overlay", els.terrainToggle.checked));
   els.riverToggle.addEventListener("change", () => setLayerVisibility("river-reference", els.riverToggle.checked));
   els.culvertToggle.addEventListener("change", () => {
-    ["culverts-shadow", "culverts-line", "culverts-hit", "selected-point-halo", "selected-point"].forEach((id) => {
+    ["culverts-shadow", "culverts-line", "culverts-active-glow", "culverts-active", "culverts-hit", "selected-point-halo", "selected-point"].forEach((id) => {
       setLayerVisibility(id, els.culvertToggle.checked);
     });
   });
-  els.fitAllButton.addEventListener("click", fitAllCulverts);
+  document.querySelectorAll("input[name='culvertColor']").forEach((input) => {
+    input.checked = input.value === state.colorMode;
+    input.addEventListener("change", () => setCulvertColorMode(input.value));
+  });
   els.favoriteButton.addEventListener("click", toggleFavorite);
   els.shareButton.addEventListener("click", shareSelected);
 }
 
-function renderSearchResults() {
-  const matches = getSearchMatches();
-  if (!els.searchInput.value.trim()) {
-    hideSearchResults();
-    return;
+function setCulvertColorMode(mode) {
+  if (!COLOR_MODES[mode]) return;
+  state.colorMode = mode;
+  localStorage.setItem("culvert.colorMode", mode);
+  if (!state.mapLoaded) return;
+  const colors = COLOR_MODES[mode];
+  state.map.setPaintProperty("culverts-shadow", "line-color", colors.shadow);
+  state.map.setPaintProperty("culverts-line", "line-color", colors.line);
+}
+
+function getActiveFilter() {
+  return ["all", ["!=", ["get", "riverReference"], true], ["==", ["get", "id"], state.selectedId || ""]];
+}
+
+function populateWardSelector() {
+  const wards = new Set();
+  for (const feature of state.data.features) {
+    if (feature.properties.riverReference) continue;
+    extractWards(feature.properties.areaName).forEach((ward) => wards.add(ward));
   }
-
-  els.searchResults.innerHTML = matches.length
-    ? matches.map((feature) => {
-        const props = feature.properties;
-        const sub = props.riverName ? `${escapeHtml(props.areaName)} / ${escapeHtml(props.riverName)}` : escapeHtml(props.areaName);
-        return `
-          <button class="search-result" type="button" data-id="${escapeHtml(props.id)}">
-            <span>
-              <strong>${escapeHtml(props.name)}</strong>
-              <span>${sub}</span>
-            </span>
-          </button>
-        `;
-      }).join("")
-    : '<div class="search-result"><span><strong>該当する暗渠がありません</strong><span>別名や地域名でも検索できます。</span></span></div>';
-
-  els.searchResults.hidden = false;
-  els.searchResults.querySelectorAll("button[data-id]").forEach((button) => {
-    button.addEventListener("click", () => {
-      selectFeature(button.dataset.id, { fit: true, pushUrl: true });
-      hideSearchResults();
-      els.searchInput.blur();
-    });
-  });
+  const sorted = [...wards].sort((a, b) => a.localeCompare(b, "ja"));
+  els.wardSelect.innerHTML = `<option value="">地域を選択</option>` + sorted.map((ward) => `<option value="${escapeAttr(ward)}">${escapeHtml(ward)}</option>`).join("");
 }
 
-function getSearchMatches() {
-  const query = normalizeText(els.searchInput.value);
-  if (!query) return [];
-  return state.data.features
-    .filter((feature) => !feature.properties.riverReference)
-    .filter((feature) => feature.properties.searchText.includes(query))
-    .slice(0, 8);
+function extractWards(areaName) {
+  return String(areaName || "")
+    .replace(/^東京都/, "")
+    .split(/[・、,/]/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
 }
 
-function hideSearchResults() {
-  els.searchResults.hidden = true;
+function selectWard(ward) {
+  if (!ward) return;
+  const matches = state.data.features.filter((feature) => !feature.properties.riverReference && extractWards(feature.properties.areaName).includes(ward));
+  if (matches.length === 0) return;
+  if (state.mapLoaded) {
+    const bounds = matches.reduce((result, feature) => extendBounds(result, flattenCoordinates(feature.geometry.coordinates)), null);
+    if (bounds) state.map.fitBounds(bounds, { padding: getFitPadding(), maxZoom: 14, duration: 700 });
+  }
+  selectFeature(matches[0].properties.id, { fit: false, pushUrl: true });
+}
+
+function syncWardSelect() {
+  const feature = getSelectedFeature();
+  const wards = extractWards(feature.properties.areaName);
+  els.wardSelect.value = wards[0] || "";
 }
 
 function selectFeature(id, options = {}) {
@@ -372,25 +376,16 @@ function selectFeature(id, options = {}) {
 
   state.selectedId = id;
   if (state.mapLoaded) {
-    state.map.setPaintProperty("culverts-line", "line-color", [
-      "case",
-      ["==", ["get", "id"], state.selectedId],
-      ACTIVE_COLOR,
-      CULVERT_COLOR,
-    ]);
-    state.map.setPaintProperty("culverts-line", "line-width", [
-      "case",
-      ["==", ["get", "id"], state.selectedId],
-      ["interpolate", ["linear"], ["zoom"], 8, 3.5, 15, 7.5],
-      ["interpolate", ["linear"], ["zoom"], 8, 2.2, 15, 5],
-    ]);
+    const filter = getActiveFilter();
+    state.map.setFilter("culverts-active-glow", filter);
+    state.map.setFilter("culverts-active", filter);
     state.map.getSource("selected-point").setData(makeSelectedPoint());
     if (options.fit) fitFeature(feature);
   }
 
   renderDetails();
-  renderNearby();
   updateFavoriteButton();
+  syncWardSelect();
 
   if (options.pushUrl) {
     const url = new URL(location.href);
@@ -423,7 +418,7 @@ function renderDetails() {
   ` : "";
   const descriptionBlock = props.description ? `<p class="description">${escapeHtml(props.description)}</p>` : "";
   const verifiedBlock = props.lastVerifiedAt
-    ? `<span class="meta-separator" aria-hidden="true"></span><span>最終確認 ${escapeHtml(props.lastVerifiedAt)}</span>`
+    ? `<div class="meta-row"><span>最終確認 ${escapeHtml(props.lastVerifiedAt)}</span></div>`
     : "";
 
   els.detail.innerHTML = `
@@ -432,44 +427,11 @@ function renderDetails() {
       <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
       <span>${escapeHtml(props.areaName)}</span>
     </div>
-    <div class="meta-row">
-      <span>情報源数 <b>${props.sources?.length || 0}</b> 件</span>
-      ${verifiedBlock}
-    </div>
+    ${verifiedBlock}
     ${descriptionBlock}
     <ul class="source-list">${sourceItems}</ul>
     ${lineworkBlock}
   `;
-}
-
-function renderNearby() {
-  const selected = getSelectedFeature();
-  const selectedCenter = selected.properties.center;
-  const features = state.data.features
-    .filter((feature) => !feature.properties.riverReference)
-    .map((feature) => ({
-      feature,
-      distance: distanceMeters(selectedCenter, feature.properties.center),
-    }))
-    .sort((a, b) => a.distance - b.distance)
-    .slice(0, 5);
-
-  els.nearby.innerHTML = features.map(({ feature, distance }) => {
-    const props = feature.properties;
-    const selectedClass = props.id === state.selectedId ? " is-selected" : "";
-    return `
-      <button class="nearby-item${selectedClass}" type="button" data-id="${escapeHtml(props.id)}">
-        <span class="line-swatch"></span>
-        <span class="nearby-name">${escapeHtml(props.name)}</span>
-        <span class="distance">${formatDistance(distance)}</span>
-        <span class="chevron" aria-hidden="true"></span>
-      </button>
-    `;
-  }).join("");
-
-  els.nearby.querySelectorAll("button[data-id]").forEach((button) => {
-    button.addEventListener("click", () => selectFeature(button.dataset.id, { fit: true, pushUrl: true }));
-  });
 }
 
 function locateUser() {
@@ -494,7 +456,7 @@ function locateUser() {
       els.locateButton.classList.remove("is-active");
     },
     () => {
-      showToast("現在地を取得できませんでした。検索または地図移動で探してください。");
+      showToast("現在地を取得できませんでした。地域選択または地図移動で探してください。");
       els.locateButton.classList.remove("is-active");
     },
     { enableHighAccuracy: true, timeout: 9000, maximumAge: 60000 },
@@ -565,14 +527,6 @@ function fitFeature(feature) {
   });
 }
 
-function fitAllCulverts() {
-  const features = state.data.features.filter((feature) => !feature.properties.riverReference);
-  const bounds = features.reduce((result, feature) => extendBounds(result, flattenCoordinates(feature.geometry.coordinates)), null);
-  if (bounds && state.mapLoaded) {
-    state.map.fitBounds(bounds, { padding: getFitPadding(), maxZoom: 12.2, duration: 700 });
-  }
-}
-
 function getFitPadding() {
   const isDesktop = matchMedia("(min-width: 760px)").matches;
   return isDesktop
@@ -627,35 +581,6 @@ function getFeatureCenter(feature) {
 function flattenCoordinates(coordinates) {
   if (typeof coordinates[0][0] === "number") return coordinates;
   return coordinates.flat();
-}
-
-function buildSearchText(feature) {
-  const props = feature.properties;
-  return normalizeText([
-    props.name,
-    props.areaName,
-    props.riverName,
-  ].filter(Boolean).join(" "));
-}
-
-function normalizeText(text) {
-  return String(text || "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
-}
-
-function distanceMeters(a, b) {
-  const toRad = (deg) => deg * Math.PI / 180;
-  const radius = 6371000;
-  const dLat = toRad(b[1] - a[1]);
-  const dLng = toRad(b[0] - a[0]);
-  const lat1 = toRad(a[1]);
-  const lat2 = toRad(b[1]);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * radius * Math.asin(Math.sqrt(h));
-}
-
-function formatDistance(meters) {
-  if (meters < 1000) return `${Math.round(meters)} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
 }
 
 function saveLastView() {
