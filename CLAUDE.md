@@ -73,6 +73,33 @@ OSM is treated as linework assistance only — never as evidence. `sources[]` ca
 
 Hardcoded `mappings[]` array lists feature IDs paired with either `osmWayIds[]` or `osmRelationId`. Pulls from Overpass API, stitches segments end-to-end with an 80m join tolerance (`stitchSegments`), writes back into `data/culverts.geojson` and stamps `lineworkPrecision: "osm-traced"` + `lineworkSources` + `osmElementIds`. ODbL 1.0 — must keep `OpenStreetMap contributors` attribution in app footer + README when shipping.
 
+`OVERPASS_URL` env var overrides the endpoint (use a mirror like `https://overpass.kumi.systems/api/interpreter` if the default times out). `OVERPASS_FIXTURE` env var loads OSM JSON from a local file instead of fetching, for offline / fully-reproducible runs.
+
+## Coordinate provenance policy
+
+Every feature in `data/culverts.geojson` must have linework that traces a real-world course. Inventing coordinates draws lines through houses and ruins user trust. **Never commit synthesized, AI-generated, or evenly-interpolated coordinate ladders.**
+
+Allowed sources of `geometry.coordinates`, in order of preference:
+
+1. **OSM way / relation IDs** — pulled via `scripts/import-osm-linework.mjs`. Sets `lineworkPrecision: "osm-traced"` automatically. Always check OSM first.
+2. **Public-sector GIS** (国土数値情報, 自治体オープンデータ, 水道歴史館アーカイブ等) — when downloadable as GeoJSON / Shapefile / KML and the license permits redistribution. Add a one-off conversion script under `scripts/`.
+3. **Manual digitization from authoritative imagery** (地理院 写真 + 標準地図 + 公式景観資料) — only when (1) and (2) are unavailable. Trace nodes that you can actually see on the imagery; do not interpolate. Set `lineworkPrecision: "manual"` and document the imagery basis in `lineworkNote`.
+
+Forbidden:
+
+- Linearly interpolated polylines that ignore the actual road / 緑道 / 水路 geometry
+- AI-generated guess coordinates
+- Long straight segments through residential blocks "to fill the map"
+- Bridging an OSM stitch gap with a fake straight segment — let `import-osm-linework.mjs` produce a `MultiLineString` instead
+
+Workflow when adding or refining a feature:
+
+1. Use the **`add-culvert` skill** (`/add-culvert`) to walk through provenance, OSM lookup, and import. The skill enforces this policy.
+2. Delegate the OSM search itself to the **`osm-linework-finder` subagent**, which runs Overpass and returns a compact ID table + ready `mappings[]` snippet without dumping raw JSON into the main context.
+3. If neither OSM nor public GIS covers the feature and you cannot do a careful manual trace from imagery, **do not commit** the feature.
+
+Always run `node scripts/validate-geojson.mjs` after editing `data/culverts.geojson`.
+
 ## Conventions
 
 - All UI strings in Japanese — match existing tone in detail / toast / aria-label text.
